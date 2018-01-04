@@ -4,6 +4,7 @@ import os
 import time
 import logging
 import serial
+import socket
 
 import pygame
 from pygame.locals import *
@@ -56,7 +57,7 @@ class MainForm(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
         self.gamepad_monitor.signalAccel.connect(self.analog_left_x.setValue)
         self.gamepad_monitor.signalSteer.connect(self.analog_right_y.setValue)
         self.gamepad_monitor.start()
-        
+
         self.drive_controller = DriveController()
         self.drive_controller.moveToThread(self.drive_controller)
         self.gamepad_monitor.signalAccel.connect(self.drive_controller.get_accel)
@@ -78,22 +79,37 @@ class DriveController(QtCore.QThread):
     def __init__(self):
         super(self.__class__, self).__init__()
         self.mutex = QtCore.QMutex()
-        self.ser = serial.Serial('/dev/ttyUSB0', 9600)
-        
+        # self.ser = serial.Serial('/dev/ttyUSB0', 9600)
+
         self.accel = 0
         self.steer = 0
+
+        self.host = "192.168.0.7"
+        self.port = 8080
+
+        self.serversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.serversock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.serversock.bind((self.host, self.port))
+        self.serversock.listen(10)
+
+        print("Waiting for connections...")
+        self.clientsock, self.client_address = self.serversock.accept()
 
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.send_command)
         self.timer.start(timer_interval)
 
     def send_command(self):
-        self.ser.write(bytes('a{0:4d}{1:4d}\n'.format(self.steer, self.accel), 'UTF-8'))
+        self.clientsock.sendall('a{0:4d}{1:4d}\n'.format(self.steer, self.accel).encode())
+        # clientsock.close()
+
+    # def send_command(self):
+        # self.ser.write(bytes('a{0:4d}{1:4d}\n'.format(self.steer, self.accel), 'UTF-8'))
         # logger.info('a{0:4d}{1:4d}\n'.format(self.steer, self.accel))
-        
+
     def get_accel(self, val):
         self.accel = int(abs(val)/100*255)
-        
+
     def get_steer(self, val):
         self.steer = int(abs(val)/100*255)
 
