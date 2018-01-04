@@ -29,24 +29,7 @@ void setup() {
 
 // the loop routine runs over and over again forever:
 void loop() {
-  
-    // print the string when a newline arrives:
-  if (stringComplete) {
-    Serial.println("ACK:"+inputString); 
-    // clear the string:
-    inputString = "";
-    stringComplete = false;
-  }
-  delay(10);               // wait for a second
-}
 
-/*
-  SerialEvent occurs whenever a new data comes in the
- hardware serial RX.  This routine is run between each
- time loop() runs, so using delay inside loop can delay
- response.  Multiple bytes of data may be available.
- */
-void serialEvent() {
   while (Serial.available()) {
     // get the new byte:
     char inChar = (char)Serial.read(); 
@@ -59,16 +42,26 @@ void serialEvent() {
     }
   }
   
-  char header = *inputString.c_str();
-  switch (header) {
-    case 'a':
-      valR = atoi(inputString.substring(1,5).c_str());
-      analogWrite(ledR, valR);
-      valL = atoi(inputString.substring(5,9).c_str());
-      analogWrite(ledL, valL);
-      break;
-    default:
-      break;
+    // print the string when a newline arrives:
+  if (stringComplete) {
+    
+    char header = *inputString.c_str();
+    switch (header) {
+      case 'a':
+        valR = atoi(inputString.substring(1,5).c_str());
+        analogWrite(ledR, valR);
+        valL = atoi(inputString.substring(5,9).c_str());
+        analogWrite(ledL, valL);
+        break;
+      default:
+        break;
+    }
+    
+    Serial.println("ACK:"+inputString); 
+    // clear the string:
+    inputString = "";
+    stringComplete = false;
   }
+  
+  delay(10);               // wait for a second
 }
-
