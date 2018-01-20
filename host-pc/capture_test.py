@@ -1,13 +1,17 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import cv2
+from urllib import request
+import numpy as np
 
-URL = "http://192.168.2.104:9000/?action=stream&ignored.mjpg"
-s_video = cv2.VideoCapture(URL)
-
+stream=request.urlopen('http://localhost:9000/?action=stream&ignored.mjpg')
+bytes=b''
 while True:
-  ret, img = s_video.read()
-  cv2.imshow("Stream Video",img)
-  key = cv2.waitKey(1) & 0xff
-  if key == ord('q'): break
+	bytes+=stream.read(1024)
+	a = bytes.find(b'\xff\xd8')
+	b = bytes.find(b'\xff\xd9')
+	if a!=-1 and b!=-1:
+		jpg = bytes[a:b+2]
+		bytes= bytes[b+2:]
+		i=cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
+		cv2.imshow('i',i)
+		if cv2.waitKey(1) ==27:
+			exit(0)
