@@ -5,6 +5,7 @@ import configparser
 import logging
 import socket
 import sys
+import threading
 from platform import python_version
 
 import pygame
@@ -66,12 +67,11 @@ class MainForm(QtWidgets.QMainWindow, main_window_ui.Ui_MainWindow):
         self.drive_controller.start()
 
         self.actionClose.triggered.connect(self.closeEvent)
-        self.actionConnectClient.triggered.connect(self.drive_controller.wait_connection)
         self.statusbar.showMessage("Hello World")
 
     def closeEvent(self, event):
         """
-        close Main Window
+        close Main Window (overwrited QMainWindow's Method)
         """
         confirmObject = QtWidgets.QMessageBox.question(self, 'Message',
             'Are you sure to quit?', QtWidgets.QMessageBox.Yes |
@@ -94,31 +94,41 @@ class DriveController(QtCore.QThread):
         self.accel_l = 0
         self.accel_r = 0
 
-        self.inifile = configparser.ConfigParser()
-        self.inifile.read('./config.ini', 'UTF-8')
-        self.server_address = str(self.inifile.get('settings', 'host'))
-        self.server_port = int(self.inifile.get('settings', 'port'))
+        inifile = configparser.ConfigParser()
+        inifile.read('./config.ini', 'UTF-8')
+        host = str(inifile.get('settings', 'host'))
+        port = int(inifile.get('settings', 'port'))
 
-        self.serversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.serversock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.serversock.bind((self.server_address, self.server_port))
-        self.serversock.listen(10)
+        serversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        serversock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        serversock.bind((host, port))
+        serversock.listen(10)
 
-        self.client_address = None
-        self.clientsock = None
+        thread = threading.Thread(target=self.worker_thread, args=(serversock, ))
+        thread.daemon = True
+        thread.start()
 
-        self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self.send_command)
-        self.timer.start(timer_interval)
+    def worker_thread(self, serversock):
+        """ worker thread """
+        while True:
+            clientsock, (client_address, client_port) = serversock.accept()
+            print('New client: {0} : {1}'.format(client_address, client_port))
 
-    def wait_connection(self):
-        """ wait connection """
-        self.clientsock, self.client_address = self.serversock.accept()
+            while True:
+                try:
+                    message = clientsock.recv(1024)
+                    print('Recv: {0} from {1} : {2}'.format(message,
+                                                            client_address,
+                                                            client_port))
+                except OSError:
+                    break
 
-    def send_command(self):
-        """ send command """
-        if self.clientsock is not None:
-            self.clientsock.sendall('a{0:4d}{1:4d}\n'.format(self.accel_l, self.accel_r).encode())
+                if len(message) == 0:
+                    break
+
+                clientsock.sendall('a{0:4d}{1:4d}\n'.format(self.accel_l, self.accel_r).encode())
+
+            print('Connection Closed: {0} : {1}'.format(client_address, client_port))
 
     def get_accel_l(self, val):
         """ get accel left """
@@ -156,7 +166,9 @@ class GamePadMonitor(QtCore.QThread):
 
     def get_state(self):
         """ get state """
-        if self.joys is not None:
+        if self.joys is None:
+            pass
+        else:
             self.signalAccelL.emit(-100*self.joys.get_axis(1))
             self.signalAccelR.emit(-100*self.joys.get_axis(3))
             eventlist = pygame.event.get() # do not remove this line (magic sentence)

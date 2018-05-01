@@ -124,7 +124,6 @@
     <property name="title">
      <string>Action</string>
     </property>
-    <addaction name="actionConnectClient"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuAction"/>
@@ -133,11 +132,6 @@
   <action name="actionClose">
    <property name="text">
     <string>Close</string>
-   </property>
-  </action>
-  <action name="actionConnectClient">
-   <property name="text">
-    <string>ConnectClient</string>
    </property>
   </action>
  </widget>

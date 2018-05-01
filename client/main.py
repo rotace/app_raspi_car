@@ -8,12 +8,6 @@ import time
 
 import serial
 
-def strtobool(obj):
-    """
-    This is function which convert string into bool.
-    """
-    return bool(distutils.util.strtobool(obj))
-
 class Main():
     """
     This is Main Class.
@@ -21,30 +15,31 @@ class Main():
     def __init__(self):
         super().__init__()
 
-        self.inifile = configparser.ConfigParser()
-        self.inifile.read('./config.ini', 'UTF-8')
-        self.server_address = str(self.inifile.get('settings', 'host'))
-        self.server_port = int(self.inifile.get('settings', 'port'))
-        self.has_controller = strtobool(self.inifile.get('flags', 'has_controller'))
-        self.has_cammera = strtobool(self.inifile.get('flags', 'has_cammera'))
-        self.has_arduino = strtobool(self.inifile.get('flags', 'has_arduino'))
+        inifile = configparser.ConfigParser()
+        inifile.read('./config.ini', 'UTF-8')
+        host = str(inifile.get('settings', 'host'))
+        port = int(inifile.get('settings', 'port'))
+        has_arduino = bool(distutils.util.strtobool(inifile.get('flags', 'has_arduino')))
 
-        if self.has_arduino:
+        if has_arduino:
             self.ser = serial.Serial('/dev/ttyUSB0', 9600)
         else:
             self.ser = None
 
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client.connect((self.server_address, self.server_port))
+        self.clientsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.clientsock.connect((host, port))
 
         self.send_command()
 
     def send_command(self):
         " send command "
         while True:
-            time.sleep(0.01)
-            response = self.client.recv(4096)
-            if self.ser is not None:
+            time.sleep(1)
+            self.clientsock.sendall(b'a')
+            response = self.clientsock.recv(4096)
+            if self.ser is None:
+                print(response)
+            else:
                 self.ser.write(response)
 
 def main():

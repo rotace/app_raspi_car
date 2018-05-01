@@ -50,4 +50,3 @@ conf:
 
 clean:
 	rm -rf *.pyc *.ini
-	(cd gui; make clean)
