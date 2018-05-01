@@ -1,6 +1,6 @@
 
 
-SRCS = main_window.ui
+SRCS = main_window_ui.ui
 
 OBJS = ${SRCS:.ui=.py}
 

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>667</width>
-    <height>527</height>
+    <width>664</width>
+    <height>487</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -62,7 +62,7 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
-           <widget class="QProgressBar" name="analog_left_x">
+           <widget class="QProgressBar" name="analog_left_y">
             <property name="minimum">
              <number>-100</number>
             </property>
@@ -110,12 +110,36 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>667</width>
+     <width>664</width>
      <height>25</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionClose"/>
+   </widget>
+   <widget class="QMenu" name="menuAction">
+    <property name="title">
+     <string>Action</string>
+    </property>
+    <addaction name="actionConnectClient"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuAction"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionClose">
+   <property name="text">
+    <string>Close</string>
+   </property>
+  </action>
+  <action name="actionConnectClient">
+   <property name="text">
+    <string>ConnectClient</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

@@ -1,7 +1,7 @@
 #!/bin/bash
 # ref: https://kitto-yakudatsu.com/archives/2338
 
-DIR="/home/pi/workspace/mjpg-streamer/mjpg-streamer-experimental/"
+DIR="$HOME/workspace/mjpg-streamer/mjpg-streamer-experimental/"
 
 if pgrep mjpg_streamer > /dev/null
 then

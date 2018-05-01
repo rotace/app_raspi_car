@@ -1,7 +1,7 @@
 #!/bin/bash
 # ref: http://www.hiramine.com/physicalcomputing/raspberrypi/webcamstreaming.html
 
-DIR="/home/yasunori/workspace/mjpg-streamer/"
+DIR="$HOME/workspace/mjpg-streamer/"
 
 if pgrep mjpg_streamer > /dev/null
 then
