@@ -41,10 +41,8 @@ class MainForm(QtWidgets.QMainWindow, main_window_ui.Ui_MainWindow):
     This is GUI main class.
     """
     def __init__(self):
-        super().__init__()
+        super(MainForm, self).__init__()
         self.setupUi(self)
-
-        self.show()
 
         self.scene = QtWidgets.QGraphicsScene()
         self.pixitem = QtWidgets.QGraphicsPixmapItem()
@@ -69,26 +67,27 @@ class MainForm(QtWidgets.QMainWindow, main_window_ui.Ui_MainWindow):
         self.actionClose.triggered.connect(self.closeEvent)
         self.statusbar.showMessage("Hello World")
 
-    def closeEvent(self, event):
-        """
-        close Main Window (overwrited QMainWindow's Method)
-        """
-        confirmObject = QtWidgets.QMessageBox.question(self, 'Message',
-            'Are you sure to quit?', QtWidgets.QMessageBox.Yes |
-            QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No )
+    # def closeEvent(self, event):
+    #     """
+    #     close Main Window (overwrited QMainWindow's Method)
+    #     """
+    #     ret = QtWidgets.QMessageBox.question(self, 'Message',
+    #         'Are you sure to quit?', QtWidgets.QMessageBox.Yes |
+    #         QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No )
 
-        if confirmObject == QtWidgets.QMessageBox.Yes:
-            event.accept()
-            self.gamepad_monitor.terminate()
-        else:
-            event.ignore()
+    #     if ret == QtWidgets.QMessageBox.Yes:
+    #         event.accept()
+    #     else:
+    #         self.drive_controller.quit()
+    #         self.gamepad_monitor.quit()
+    #         event.ignore()
 
 class DriveController(QtCore.QThread):
     """
     This is class for controlling driving.
     """
     def __init__(self):
-        super().__init__()
+        super(DriveController, self).__init__()
         self.mutex = QtCore.QMutex()
 
         self.accel_l = 0
@@ -107,7 +106,7 @@ class DriveController(QtCore.QThread):
         thread = threading.Thread(target=self.worker_thread, args=(serversock, ))
         thread.daemon = True
         thread.start()
-
+    
     def worker_thread(self, serversock):
         """ worker thread """
         while True:
@@ -127,16 +126,19 @@ class DriveController(QtCore.QThread):
                     break
 
                 clientsock.sendall('a{0:4d}{1:4d}\n'.format(self.accel_l, self.accel_r).encode())
+                print('data: {0} : {1}'.format(self.accel_l, self.accel_r))
 
+            clientsock.close()
             print('Connection Closed: {0} : {1}'.format(client_address, client_port))
 
     def get_accel_l(self, val):
         """ get accel left """
-        self.accel_l = int(abs(val)/100*255)
+        self.accel_l = int(val/100*255)
 
     def get_accel_r(self, val):
         """ get accel right """
-        self.accel_r = int(abs(val)/100*255)
+        self.accel_r = int(val/100*255)
+
 
 class GamePadMonitor(QtCore.QThread):
     """
@@ -146,8 +148,11 @@ class GamePadMonitor(QtCore.QThread):
     signalAccelR = QtCore.pyqtSignal(float)
 
     def __init__(self):
-        super().__init__()
+        super(GamePadMonitor, self).__init__()
         self.mutex = QtCore.QMutex()
+
+        # self.finished.connect(self.close)
+        # self.finished.connect(self.deleteLater)
 
         pygame.init()
         pygame.joystick.init()
@@ -175,11 +180,14 @@ class GamePadMonitor(QtCore.QThread):
             # buttonlist = filter(lambda e : e.type == pygame.locals.JOYBUTTONDOWN , eventlist)
             # print( list(map(lambda x : x.button, buttonlist)) )
 
-    def terminate(self):
-        """ terminate """
-        self.quit()
-        pygame.quit()
-
+    # def close(self):
+    #     """ close """
+    #     self.timer.stop()
+    #     if self.joys is None:
+    #         pass
+    #     else:
+    #         self.joys.quit()
+    #     pygame.quit()
 
 def main():
     """
@@ -187,7 +195,8 @@ def main():
     """
     app = QtWidgets.QApplication(sys.argv)
     form = MainForm() # do not remove object "form" (avoid to delete MainForm)
-    app.exec_()
+    form.show()
+    sys.exit(app.exec_())
 
 if __name__ == '__main__':
     main()
