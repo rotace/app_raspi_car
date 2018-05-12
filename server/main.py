@@ -56,14 +56,10 @@ class MainForm(QtWidgets.QMainWindow, main_window_ui.Ui_MainWindow):
         self.gamepad_monitor = GamePadMonitor()
         self.gamepad_monitor.signalAccelL.connect(self.analog_left_y.setValue)
         self.gamepad_monitor.signalAccelR.connect(self.analog_right_y.setValue)
-        self.thread = threading.Thread(target=self.gamepad_monitor.start)
-        self.thread.start()
 
         self.drive_controller = DriveController()
-        self.drive_controller.moveToThread(self.drive_controller)
         self.gamepad_monitor.signalAccelL.connect(self.drive_controller.get_accel_l)
         self.gamepad_monitor.signalAccelR.connect(self.drive_controller.get_accel_r)
-        self.drive_controller.start()
 
         self.actionClose.triggered.connect(self.closeEvent)
         self.statusbar.showMessage("Hello World")
@@ -79,20 +75,20 @@ class MainForm(QtWidgets.QMainWindow, main_window_ui.Ui_MainWindow):
         if ret == QtWidgets.QMessageBox.Yes:
             event.accept()
             self.gamepad_monitor.quit()
-            self.drive_controller.quit()
+            # self.drive_controller.quit()
         else:
             event.ignore()
 
-class DriveController(QtCore.QThread):
+class DriveController(QtCore.QObject):
     """
     This is class for controlling driving.
-    """
+    """    
     def __init__(self):
         super(DriveController, self).__init__()
-        self.mutex = QtCore.QMutex()
 
         self.accel_l = 0
         self.accel_r = 0
+        self.quit_flag = False
 
         inifile = configparser.ConfigParser()
         inifile.read('./config.ini', 'UTF-8')
@@ -147,47 +143,53 @@ class GamePadMonitor(QtCore.QObject):
     """
     signalAccelL = QtCore.pyqtSignal(float)
     signalAccelR = QtCore.pyqtSignal(float)
-    quit_flag = False
+
+    def __init__(self):
+        super(GamePadMonitor, self).__init__()
+        self.quit_flag = False
+        self.lock = threading.Lock()
+        self.thread = threading.Thread(target=self.start)
+        self.thread.start()
 
     def start(self):
         """
         start
         """
-        pygame.init()
-        pygame.joystick.init()
+        with self.lock:
+            pygame.init()
+            pygame.joystick.init()
 
-        try:
-            joys = pygame.joystick.Joystick(0)
-            joys.init()
-            print("connect joystick")
-        except pygame.error:
-            joys = None
-            print("no joystick!")
+            try:
+                joys = pygame.joystick.Joystick(0)
+                joys.init()
+                print("connect joystick")
+            except pygame.error:
+                joys = None
+                print("no joystick!")
 
-        clock = pygame.time.Clock()
-        while True:
-            clock.tick(60)
-            if joys is None:
-                pass
-            else:
-                self.signalAccelL.emit(-100*joys.get_axis(1))
-                self.signalAccelR.emit(-100*joys.get_axis(3))
-            for event in pygame.event.get():
-                if event.type == pygame.locals.QUIT:
+            clock = pygame.time.Clock()
+            while True:
+                clock.tick(60)
+                if joys is None:
+                    pass
+                else:
+                    self.signalAccelL.emit(-100*joys.get_axis(1))
+                    self.signalAccelR.emit(-100*joys.get_axis(3))
+                for event in pygame.event.get():
+                    if event.type == pygame.locals.QUIT:
+                        pygame.quit()
+                        break
+                if self.quit_flag:
                     pygame.quit()
                     break
-            if self.quit_flag:
-                    pygame.quit()
-                    self.quit_flag = False
-                    break
-    
+
     def quit(self):
         """
         quit
         """
         self.quit_flag = True
-        while True:
-            if not self.quit_flag: break
+        with self.lock:
+            pass
 
 
 def main():
