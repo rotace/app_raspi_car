@@ -9,6 +9,7 @@ import threading
 from platform import python_version
 
 import pygame
+import pygame.locals
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.Qt import PYQT_VERSION_STR
 from PyQt5.QtCore import QT_VERSION_STR
@@ -53,10 +54,10 @@ class MainForm(QtWidgets.QMainWindow, main_window_ui.Ui_MainWindow):
         self.analog_right_y.setValue(-20)
 
         self.gamepad_monitor = GamePadMonitor()
-        self.gamepad_monitor.moveToThread(self.gamepad_monitor)
         self.gamepad_monitor.signalAccelL.connect(self.analog_left_y.setValue)
         self.gamepad_monitor.signalAccelR.connect(self.analog_right_y.setValue)
-        self.gamepad_monitor.start()
+        self.thread = threading.Thread(target=self.gamepad_monitor.start)
+        self.thread.start()
 
         self.drive_controller = DriveController()
         self.drive_controller.moveToThread(self.drive_controller)
@@ -67,20 +68,20 @@ class MainForm(QtWidgets.QMainWindow, main_window_ui.Ui_MainWindow):
         self.actionClose.triggered.connect(self.closeEvent)
         self.statusbar.showMessage("Hello World")
 
-    # def closeEvent(self, event):
-    #     """
-    #     close Main Window (overwrited QMainWindow's Method)
-    #     """
-    #     ret = QtWidgets.QMessageBox.question(self, 'Message',
-    #         'Are you sure to quit?', QtWidgets.QMessageBox.Yes |
-    #         QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No )
+    def closeEvent(self, event):
+        """
+        close Main Window (overwrited QMainWindow's Method)
+        """
+        ret = QtWidgets.QMessageBox.question(self, 'Message',
+            'Are you sure to quit?', QtWidgets.QMessageBox.Yes |
+            QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No )
 
-    #     if ret == QtWidgets.QMessageBox.Yes:
-    #         event.accept()
-    #     else:
-    #         self.drive_controller.quit()
-    #         self.gamepad_monitor.quit()
-    #         event.ignore()
+        if ret == QtWidgets.QMessageBox.Yes:
+            event.accept()
+            self.gamepad_monitor.quit()
+            self.drive_controller.quit()
+        else:
+            event.ignore()
 
 class DriveController(QtCore.QThread):
     """
@@ -106,7 +107,7 @@ class DriveController(QtCore.QThread):
         thread = threading.Thread(target=self.worker_thread, args=(serversock, ))
         thread.daemon = True
         thread.start()
-    
+
     def worker_thread(self, serversock):
         """ worker thread """
         while True:
@@ -140,54 +141,54 @@ class DriveController(QtCore.QThread):
         self.accel_r = int(val/100*255)
 
 
-class GamePadMonitor(QtCore.QThread):
+class GamePadMonitor(QtCore.QObject):
     """
     This is the class for monitoring gamepad.
     """
     signalAccelL = QtCore.pyqtSignal(float)
     signalAccelR = QtCore.pyqtSignal(float)
+    quit_flag = False
 
-    def __init__(self):
-        super(GamePadMonitor, self).__init__()
-        self.mutex = QtCore.QMutex()
-
-        # self.finished.connect(self.close)
-        # self.finished.connect(self.deleteLater)
-
+    def start(self):
+        """
+        start
+        """
         pygame.init()
         pygame.joystick.init()
 
         try:
-            self.joys = pygame.joystick.Joystick(0)
-            self.joys.init()
+            joys = pygame.joystick.Joystick(0)
+            joys.init()
             print("connect joystick")
         except pygame.error:
-            self.joys = None
+            joys = None
             print("no joystick!")
 
-        self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self.get_state)
-        self.timer.start(timer_interval)
+        clock = pygame.time.Clock()
+        while True:
+            clock.tick(60)
+            if joys is None:
+                pass
+            else:
+                self.signalAccelL.emit(-100*joys.get_axis(1))
+                self.signalAccelR.emit(-100*joys.get_axis(3))
+            for event in pygame.event.get():
+                if event.type == pygame.locals.QUIT:
+                    pygame.quit()
+                    break
+            if self.quit_flag:
+                    pygame.quit()
+                    self.quit_flag = False
+                    break
+    
+    def quit(self):
+        """
+        quit
+        """
+        self.quit_flag = True
+        while True:
+            if not self.quit_flag: break
 
-    def get_state(self):
-        """ get state """
-        if self.joys is None:
-            pass
-        else:
-            self.signalAccelL.emit(-100*self.joys.get_axis(1))
-            self.signalAccelR.emit(-100*self.joys.get_axis(3))
-            eventlist = pygame.event.get() # do not remove this line (magic sentence)
-            # buttonlist = filter(lambda e : e.type == pygame.locals.JOYBUTTONDOWN , eventlist)
-            # print( list(map(lambda x : x.button, buttonlist)) )
-
-    # def close(self):
-    #     """ close """
-    #     self.timer.stop()
-    #     if self.joys is None:
-    #         pass
-    #     else:
-    #         self.joys.quit()
-    #     pygame.quit()
 
 def main():
     """
