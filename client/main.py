@@ -17,7 +17,7 @@ def main():
     host = str(inifile.get('settings', 'host'))
     port = int(inifile.get('settings', 'port'))
 
-    if '/dev/ttyUSB0' in list(serial.tools.list_ports.comports()):
+    if '/dev/ttyUSB0' in serial.tools.list_ports.comports()[0]:
         ser = serial.Serial('/dev/ttyUSB0', 9600)
     else:
         ser = None
@@ -26,7 +26,7 @@ def main():
     clientsock.connect((host, port))
 
     while True:
-        time.sleep(0.01)
+        time.sleep(0.1)
         try:
             clientsock.sendall(b'a')
             response = clientsock.recv(4096)
@@ -40,11 +40,15 @@ def main():
             print(response)
         else:
             ser.write(response)
+            if ser.inWaiting() > 0:
+                print(ser.read(ser.inWaiting()))
+            else:
+                print("pass")
 
     if ser is None:
         print('close')
     else:
-        ser.write(b'close')
+        ser.write(b'c')
 
 
 if __name__ == '__main__':
