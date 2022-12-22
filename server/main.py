@@ -15,8 +15,6 @@ from PyQt5.Qt import PYQT_VERSION_STR
 from PyQt5.QtCore import QT_VERSION_STR
 from sip import SIP_VERSION_STR
 
-from gui import main_window_ui
-
 # version check
 print("## python ", python_version())
 print("## Qt     ", QT_VERSION_STR)
@@ -37,20 +35,27 @@ logger.addHandler(sh)
 timer_interval = 20 # [milliseconds]
 
 
-class MainForm(QtWidgets.QMainWindow, main_window_ui.Ui_MainWindow):
+class MainForm(QtWidgets.QMainWindow):
     """
     This is GUI main class.
     """
     def __init__(self):
         super(MainForm, self).__init__()
-        self.setupUi(self)
+        cent_wid = QtWidgets.QWidget()
+        cent_lay = QtWidgets.QVBoxLayout()
+        cent_wid.setLayout(cent_lay)
 
-        self.scene = QtWidgets.QGraphicsScene()
-        self.pixitem = QtWidgets.QGraphicsPixmapItem()
-        self.scene.addItem(self.pixitem)
-        self.graphicsView.setScene(self.scene)
+        self.analog_left_y = QtWidgets.QProgressBar()
+        self.analog_right_y = QtWidgets.QProgressBar()
+        cent_lay.addWidget(self.analog_left_y)
+        cent_lay.addWidget(self.analog_right_y)
+        cent_lay.addStretch()
 
-        self.analog_left_y.setValue(20)
+        self.analog_left_y.setMinimum(-100)
+        self.analog_left_y.setMaximum(+100)
+        self.analog_left_y.setValue(+20)
+        self.analog_right_y.setMinimum(-100)
+        self.analog_right_y.setMaximum(+100)
         self.analog_right_y.setValue(-20)
 
         self.gamepad_monitor = GamePadMonitor()
@@ -61,8 +66,9 @@ class MainForm(QtWidgets.QMainWindow, main_window_ui.Ui_MainWindow):
         self.gamepad_monitor.signalAccelL.connect(self.drive_controller.get_accel_l)
         self.gamepad_monitor.signalAccelR.connect(self.drive_controller.get_accel_r)
 
-        self.actionClose.triggered.connect(self.closeEvent)
-        self.statusbar.showMessage("Hello World")
+        self.setCentralWidget(cent_wid)
+        self.setWindowTitle("app_raspi_car")
+        self.resize(600,400)
 
     def closeEvent(self, event):
         """
