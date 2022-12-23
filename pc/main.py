@@ -3,24 +3,12 @@ Main Program for server
 """
 import sys
 import threading
-from platform import python_version
 
 import pygame
 import pygame.locals
 from PyQt5 import QtCore, QtWidgets, QtNetwork
-from PyQt5.Qt import PYQT_VERSION_STR
-from PyQt5.QtCore import QT_VERSION_STR
-from sip import SIP_VERSION_STR
 
-# version check
-print("## python ", python_version())
-print("## Qt     ", QT_VERSION_STR)
-print("## PyQt   ", PYQT_VERSION_STR)
-print("## sip    ", SIP_VERSION_STR)
-# assert(python_version() == '3.5.2')
-# assert(QT_VERSION_STR == '5.6.2')
-# assert(PYQT_VERSION_STR == '5.6')
-# assert(SIP_VERSION_STR == '4.18')
+import video_receiver
 
 class MainForm(QtWidgets.QMainWindow):
     """
@@ -31,6 +19,9 @@ class MainForm(QtWidgets.QMainWindow):
         cent_wid = QtWidgets.QWidget()
         cent_lay = QtWidgets.QVBoxLayout()
         cent_wid.setLayout(cent_lay)
+
+        self.video_receiver = video_receiver.VideoReceiver()
+        cent_lay.addWidget(self.video_receiver)
 
         self.gamepad_monitor = GamePadMonitor()
         cent_lay.addWidget(self.gamepad_monitor)
@@ -56,7 +47,6 @@ class MainForm(QtWidgets.QMainWindow):
         if ret == QtWidgets.QMessageBox.Yes:
             event.accept()
             self.gamepad_monitor.quit()
-            # self.drive_controller.quit()
         else:
             event.ignore()
 

@@ -1,14 +1,16 @@
 # app_raspi_car
-linux-PC, raspberry-pi, arduinoを用いたラジコンカー
+制御PC, Raspberry-Pi, Arduinoを用いたラジコンカー
 
 ## 構成
 * 制御PC
 * Raspberry-Pi
+* Arduino
 
 ## 利用方法
 
 ### 0. Raspberry-Piへの接続
 
+【制御PC側】
 ``` bash
 # 疎通確認(mDNSを利用)
 pc:$ ping raspberrypi.local
@@ -18,18 +20,26 @@ pc:$ ssh pi@raspberrypi.local
 
 ### 1. Raspberry-Piカメラの確認
 
+【Raspberry-Pi側】
 ``` bash
 # 以下のコマンドを実行
-pi:$ cd ~/workspace/app_raspi_car/raspi; make stream
+pi:$ cd ${Inst Dir}/app_raspi_car/raspi/
+pi:$ make stream
 # もしくは、mjpg-streamerのインストール先に移動し以下を実行
 pi:$ ./mjpg-streamer -i "input_raspicam.so -fps 10 -q 20 -x 640 -y 480" -o "output_http.so -w ./www -p 9000"
 ```
 
-mjpg-streamerの起動後に、制御PCのブラウザから`http://raspberrypi.local:9000`にアクセスする。
-
+【制御PC側】
+``` bash
+# ブラウザから`http://raspberrypi.local:9000`にアクセスする。
+# もしくは、以下を実行
+pc:$ cd ${Inst Dir}/app_raspi_car/pc/
+pc:$ python3 video_receiver.py
+```
 
 ### 2. Arduinoへスケッチ書き込み
 
+【Raspberry-Pi側】
 ``` bash
 # arduino-cliのインストール
 # https://arduino.github.io/arduino-cli/0.29/installation/
@@ -40,7 +50,7 @@ pi:$ echo "export PATH=$PATH:$HOME/workspace/bin" >> ~/.bashrc
 # パッケージのインストール
 pi:$ arduino-cli core install arduino:avr
 # スケッチへ移動
-pi:$ cd ~/workspace/app_raspi_car/arduino/
+pi:$ cd ${Inst Dir}/app_raspi_car/arduino/
 # スケッチをコンパイル
 pi:$ arduino-cli compile -b arduino:avr:nano
 # スケッチをアップロード
@@ -51,12 +61,20 @@ pi:$ arduino-cli upload -b arduino:avr:nano:cpu=atmega328old -p /dev/ttyUSB0
 
 ### 3. 起動
 
+【Raspberry-Pi側】
 ``` bash
-# Raspbery-Pi側の起動
-pi:$ cd ~/workspace/app_raspi_car/raspi
+# カメラ起動
+pi:$ cd ${Inst Dir}/app_raspi_car/raspi/
+pi:$ make stream
+# 中継ソフト起動
+pi:$ cd ${Inst Dir}/app_raspi_car/raspi/
 pi:$ python3 main.py
-# 制御PC側の起動
-pc:$ cd ~/workspace/app_raspi_car/pc
+```
+
+【制御PC側】
+``` bash
+# 制御ソフト起動
+pc:$ cd ${Inst Dir}/app_raspi_car/pc/
 pc:$ python3 main.py
 ```
 
