@@ -58,7 +58,12 @@ pc:$ cd ~/workspace/app_raspi_car/pc
 pc:$ python3 main.py
 ```
 
-### 番外1. Raspberry-PiへAndroidからSSH接続
+### 番外1. 「Ctrl+C」で終了できない場合
+1. 「Ctrl+Z」を押下し、一時停止する。
+1. 「jobs」コマンドでジョブ番号（例:1）を確認する。
+1. 「kill %1」でプロセスを終了する。
+
+### 番外2. Raspberry-PiへAndroidからSSH接続
 1. Raspberry-PiとAndroidをUSB接続する。
 1. AndoridをUSBテザリングモードにする。
 1. アプリ「termux」を起動する。
@@ -67,7 +72,7 @@ pc:$ python3 main.py
 1. コマンド「ifconfig wlan0」を実行。wlan0のIPを調べる。
 1. linux-PCから、「ssh pi@{wlan0'sIP}」を実行。パスワードを入力してログインする。
 
-### 番外2. Raspberry-PiへWifiアクセスポイントを登録
+### 番外3. Raspberry-PiへWifiアクセスポイントを登録
 
 ``` bash
 # wpa_supplicant.confを編集し以下を追記して再起動

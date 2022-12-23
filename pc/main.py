@@ -5,8 +5,6 @@ import sys
 import threading
 from platform import python_version
 
-import time
-import socket
 import pygame
 import pygame.locals
 from PyQt5 import QtCore, QtWidgets, QtNetwork

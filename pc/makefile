@@ -2,11 +2,6 @@
 # config
 dist := $(shell lsb_release -a 2>/dev/null | \
     awk '/Distributor/{print $$3}')
-host := 192.168.2.105
-port := 8080
-has_controller := true
-has_cammera := true
-has_arduino := true
 
 ifeq ($(dist),Ubuntu)
   exec = python
@@ -31,22 +26,12 @@ python_version_patch := $(word 3,${python_version_full})
 
 all:
 
-
 run:all
 ifeq ($(python_version_major),3)
 	$(exec) main.py
 else
 	@echo "!!! python vesrion should be 3.x !!!"
 endif
-
-conf:
-	@echo '[settings]' > config.ini
-	@echo 'host = $(host)' >> config.ini
-	@echo 'port = $(port)' >> config.ini
-	@echo '[flags]' >> config.ini
-	@echo 'has_controller = $(has_controller)' >> config.ini
-	@echo 'has_cammera = $(has_cammera)' >> config.ini
-	@echo 'has_arduino = $(has_arduino)' >> config.ini
 
 clean:
 	rm -rf *.pyc *.ini

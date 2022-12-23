@@ -2,9 +2,6 @@ import socket
 import serial
 import serial.tools.list_ports
 
-HOST="127.0.0.1"
-PORT=8090
-
 def main():
     " main function "
 
@@ -16,7 +13,7 @@ def main():
     serversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serversock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serversock.settimeout(3)
-    serversock.bind((HOST, PORT))
+    serversock.bind(("", 8090))
     serversock.listen(10)
 
     while True:
