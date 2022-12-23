@@ -2,7 +2,7 @@ import cv2
 from urllib import request
 import numpy as np
 
-stream=request.urlopen('http://localhost:9000/?action=stream&ignored.mjpg')
+stream=request.urlopen('http://raspberrypi.local:9000/?action=stream&ignored.mjpg')
 bytes=b''
 while True:
 	bytes+=stream.read(1024)

@@ -1,16 +1,15 @@
 """
 Main Program for server
 """
-import configparser
-import logging
-import socket
 import sys
 import threading
 from platform import python_version
 
+import time
+import socket
 import pygame
 import pygame.locals
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets, QtNetwork
 from PyQt5.Qt import PYQT_VERSION_STR
 from PyQt5.QtCore import QT_VERSION_STR
 from sip import SIP_VERSION_STR
@@ -25,16 +24,6 @@ print("## sip    ", SIP_VERSION_STR)
 # assert(PYQT_VERSION_STR == '5.6')
 # assert(SIP_VERSION_STR == '4.18')
 
-logger = logging.getLogger('LoggingTest')
-logger.setLevel(10)
-fh = logging.FileHandler('main.log')
-sh = logging.StreamHandler()
-logger.addHandler(fh)
-logger.addHandler(sh)
-
-timer_interval = 20 # [milliseconds]
-
-
 class MainForm(QtWidgets.QMainWindow):
     """
     This is GUI main class.
@@ -45,26 +34,14 @@ class MainForm(QtWidgets.QMainWindow):
         cent_lay = QtWidgets.QVBoxLayout()
         cent_wid.setLayout(cent_lay)
 
-        self.analog_left_y = QtWidgets.QProgressBar()
-        self.analog_right_y = QtWidgets.QProgressBar()
-        cent_lay.addWidget(self.analog_left_y)
-        cent_lay.addWidget(self.analog_right_y)
-        cent_lay.addStretch()
-
-        self.analog_left_y.setMinimum(-100)
-        self.analog_left_y.setMaximum(+100)
-        self.analog_left_y.setValue(+20)
-        self.analog_right_y.setMinimum(-100)
-        self.analog_right_y.setMaximum(+100)
-        self.analog_right_y.setValue(-20)
-
         self.gamepad_monitor = GamePadMonitor()
-        self.gamepad_monitor.signalAccelL.connect(self.analog_left_y.setValue)
-        self.gamepad_monitor.signalAccelR.connect(self.analog_right_y.setValue)
+        cent_lay.addWidget(self.gamepad_monitor)
 
         self.drive_controller = DriveController()
-        self.gamepad_monitor.signalAccelL.connect(self.drive_controller.get_accel_l)
-        self.gamepad_monitor.signalAccelR.connect(self.drive_controller.get_accel_r)
+        cent_lay.addWidget(self.drive_controller)
+
+        self.gamepad_monitor.signalAccelL.connect(self.drive_controller.set_accel_l)
+        self.gamepad_monitor.signalAccelR.connect(self.drive_controller.set_accel_r)
 
         self.setCentralWidget(cent_wid)
         self.setWindowTitle("app_raspi_car")
@@ -85,73 +62,96 @@ class MainForm(QtWidgets.QMainWindow):
         else:
             event.ignore()
 
-class DriveController(QtCore.QObject):
+class DriveController(QtWidgets.QGroupBox):
     """
     This is class for controlling driving.
     """    
-    def __init__(self):
-        super(DriveController, self).__init__()
+    def __init__(self, parent=None):
+        super(DriveController, self).__init__(parent=parent)
 
+        def toggle_connect():
+            if self.sock.state() == QtNetwork.QAbstractSocket.SocketState.ConnectedState:
+                self.sock.disconnectFromHost()
+            else:
+                self.sock.connectToHost(cmb_addr.currentText(), int(cmb_port.currentText()))
+        
+        btn_connect = QtWidgets.QPushButton("Connect")
+        cmb_addr = QtWidgets.QComboBox()
+        cmb_port = QtWidgets.QComboBox()
+        cmb_addr.addItems(["127.0.0.1", "raspberrypi.local"])
+        cmb_port.addItems(["8090"])
+        btn_connect.clicked.connect(toggle_connect)
+
+        lay = QtWidgets.QFormLayout()
+        lay.addRow("Connect TCP Server", btn_connect)
+        lay.addRow("Connect Addr", cmb_addr)
+        lay.addRow("Connect Port", cmb_port)
+        self.setLayout(lay)
+        self.setTitle(self.__class__.__name__)
+
+        self.sock = QtNetwork.QTcpSocket()
+        self.sock.readyRead.connect(self.tcp_ready_read)
+        self.sock.stateChanged.connect(self.tcp_state_changed)
+
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.send_command)
+
+        self.btn_connect = btn_connect
         self.accel_l = 0
         self.accel_r = 0
-        self.quit_flag = False
 
-        inifile = configparser.ConfigParser()
-        inifile.read('./config.ini', 'UTF-8')
-        host = str(inifile.get('settings', 'host'))
-        port = int(inifile.get('settings', 'port'))
+    def tcp_ready_read(self):
+        while self.sock.bytesAvailable():
+            print(self.sock.readAll())
 
-        serversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        serversock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        serversock.bind((host, port))
-        serversock.listen(10)
+    def tcp_state_changed(self, state):
+        if state == QtNetwork.QAbstractSocket.SocketState.ConnectedState:
+            self.btn_connect.setText("Disconnect")
+            self.timer.start(100)
+        if state == QtNetwork.QAbstractSocket.SocketState.UnconnectedState:
+            self.btn_connect.setText("Connect")
+            self.timer.stop()
 
-        thread = threading.Thread(target=self.worker_thread, args=(serversock, ))
-        thread.daemon = True
-        thread.start()
+    def send_command(self):
+        self.sock.write('a{0:4d}{1:4d}\n'.format(self.accel_l, self.accel_r).encode())
+        print('data: {0} : {1}'.format(self.accel_l, self.accel_r))
 
-    def worker_thread(self, serversock):
-        """ worker thread """
-        while True:
-            clientsock, (client_address, client_port) = serversock.accept()
-            print('New client: {0} : {1}'.format(client_address, client_port))
-
-            while True:
-                try:
-                    message = clientsock.recv(1024)
-                    print('Recv: {0} from {1} : {2}'.format(message,
-                                                            client_address,
-                                                            client_port))
-                except OSError:
-                    break
-
-                if len(message) == 0:
-                    break
-
-                clientsock.sendall('a{0:4d}{1:4d}\n'.format(self.accel_l, self.accel_r).encode())
-                print('data: {0} : {1}'.format(self.accel_l, self.accel_r))
-
-            clientsock.close()
-            print('Connection Closed: {0} : {1}'.format(client_address, client_port))
-
-    def get_accel_l(self, val):
+    def set_accel_l(self, val):
         """ get accel left """
         self.accel_l = int(val/100*255)
 
-    def get_accel_r(self, val):
+    def set_accel_r(self, val):
         """ get accel right """
         self.accel_r = int(val/100*255)
 
 
-class GamePadMonitor(QtCore.QObject):
+class GamePadMonitor(QtWidgets.QGroupBox):
     """
     This is the class for monitoring gamepad.
     """
     signalAccelL = QtCore.pyqtSignal(float)
     signalAccelR = QtCore.pyqtSignal(float)
 
-    def __init__(self):
-        super(GamePadMonitor, self).__init__()
+    def __init__(self, parent=None):
+        super(GamePadMonitor, self).__init__(parent=parent)
+
+        self.analog_l = QtWidgets.QProgressBar()
+        self.analog_l.setMinimum(-100)
+        self.analog_l.setMaximum(+100)
+        self.analog_l.setValue(+20)
+        self.signalAccelL.connect(self.analog_l.setValue)
+        self.analog_r = QtWidgets.QProgressBar()
+        self.analog_r.setMinimum(-100)
+        self.analog_r.setMaximum(+100)
+        self.analog_r.setValue(-20)
+        self.signalAccelR.connect(self.analog_r.setValue)
+
+        lay = QtWidgets.QFormLayout()
+        lay.addRow("Left", self.analog_l)
+        lay.addRow("Right", self.analog_r)
+        self.setLayout(lay)
+        self.setTitle(self.__class__.__name__)
+
         self.quit_flag = False
         self.lock = threading.Lock()
         self.thread = threading.Thread(target=self.start)

@@ -8,16 +8,15 @@ linux-PC, raspberry-pi, arduinoを用いたラジコンカー
 ## 利用方法
 
 ### 0. Raspberry-Piへの接続
-Raspberry-Piを制御PCからssh接続する。 
+
 ``` bash
 # 疎通確認(mDNSを利用)
-PC:$ ping raspberrypi.local
+pc:$ ping raspberrypi.local
 # SSH接続(mDNSを利用)
-PC:$ ssh pi@raspberrypi.local
+pc:$ ssh pi@raspberrypi.local
 ```
 
 ### 1. Raspberry-Piカメラの確認
-Raspberry-Piカメラを制御PCから動作確認する。
 
 ``` bash
 # mjpg-streamerのインストール先に移動し以下を実行
@@ -26,23 +25,38 @@ pi:$ ./mjpg-streamer -i "input_raspicam.so -fps 10 -q 20 -x 640 -y 480" -o "outp
 
 mjpg-streamerの起動後に、制御PCのブラウザから`http://raspberrypi.local:9000`にアクセスする。
 
-### 2. サーバ及びクライアントの準備
-1. サーバのIPアドレスを取得  
-    ifconfigコマンドでwlan0のIPアドレスを調べる。
-    コマンド「make conf」を実行すると、自身のIPアドレスをconfig.iniに格納する。
-1. クライアントにサーバのIPアドレスを設定
-    先ほど調べたIPアドレスをクライアント側のconfig.iniに書き込む。
-    コマンド「make host='192.168.x.x' conf」を実行すると、IPアドレスをconfig.iniに格納する。
 
-### 3. サーバ->クライアントの順に起動
-1. サーバでコマンド「make run」を実行。
-1. クライアントでコマンド「make run」を実行。
+### 2. Arduinoへスケッチ書き込み
 
-### 番外0. デバッグモード
-controller, cammera, arduinoのそれぞれがない場合は、以下のコマンドでconfig.iniを生成する。
-* make has_controller='false' conf
-* make has_cammera='false' conf
-* make has_arduino='false' conf
+``` bash
+# arduino-cliのインストール
+# https://arduino.github.io/arduino-cli/0.29/installation/
+pi:$ cd ~/workspace/
+pi:$ curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+# PATHを追加
+pi:$ echo "export PATH=$PATH:$HOME/workspace/bin" >> ~/.bashrc
+# パッケージのインストール
+pi:$ arduino-cli core install arduino:avr
+# スケッチへ移動
+pi:$ cd ~/workspace/app_raspi_car/arduino/
+# スケッチをコンパイル
+pi:$ arduino-cli compile -b arduino:avr:nano
+# スケッチをアップロード
+pi:$ arduino-cli upload -b arduino:avr:nano:cpu=atmega328old -p /dev/ttyUSB0
+```
+
+正しくスケッチが書き込まれるか確認する場合は、`https://github.com/arduino/arduino-examples`をクローンして「01.Basics/Blink」（Lチカ）のコンパイル＆アップロードを試してみる。
+
+### 3. 起動
+
+``` bash
+# Raspbery-Pi側の起動
+pi:$ cd ~/workspace/app_raspi_car/raspi
+pi:$ python3 main.py
+# 制御PC側の起動
+pc:$ cd ~/workspace/app_raspi_car/pc
+pc:$ python3 main.py
+```
 
 ### 番外1. Raspberry-PiへAndroidからSSH接続
 1. Raspberry-PiとAndroidをUSB接続する。
