@@ -19,7 +19,9 @@ pc:$ ssh pi@raspberrypi.local
 ### 1. Raspberry-Piカメラの確認
 
 ``` bash
-# mjpg-streamerのインストール先に移動し以下を実行
+# 以下のコマンドを実行
+pi:$ cd ~/workspace/app_raspi_car/raspi; make stream
+# もしくは、mjpg-streamerのインストール先に移動し以下を実行
 pi:$ ./mjpg-streamer -i "input_raspicam.so -fps 10 -q 20 -x 640 -y 480" -o "output_http.so -w ./www -p 9000"
 ```
 
